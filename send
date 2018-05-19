@@ -1,0 +1,88 @@
+#!/bin/sh
+########################################################################
+#                                                                      #
+#   Arquivo: enviaemail-novosist                 Data: 26/03/2018      #
+#   Versao: 1.0.1                                                      #
+#   Paulo Henrique de Andrade Vaz - Administrador de Redes             #
+#             Programa padrao de envio de e-mails pelo NovoSist.       #
+#             Este programa segue o padrao de envio atraves de um      #
+#             Servidor de e-mails externo e com autenticacao.          #
+#                                                                      #
+#    Updates: 1.0.1 - Adicionado remetente atraves da opcao -r         #
+#                                                                      #
+#                                                                      #
+#    Sintaxe: enviaemail-novosist [-h] [-d -c -a  -b -f -r]            #
+#       -d = Destinatario                                              #
+#       -a = Assunto                                                   #
+#       -b = Caminho do arquivo do corpo do E-mail em arquivo TXT      #
+#       -c = Com Copia                                                 #
+#       -e = Corpo do e-mail em texto                                  #
+#       -f = Caminho do arquivo para anexo                             #
+#       -r = Remetente                                                 #
+########################################################################
+
+SMTP=[serversmtp:port]
+REMETENTE=[Remetente]
+USUARIO=[your user]
+SENHA=[your password]
+
+usage="
+Help:
+$(basename $0) [-h] [-d -c -a  -b -o -f -r] 
+Programa padrao de envio de e-mails pelo NovoSist. Este programa segue o padrao de envio atraves de um Servidor de e-mails externo e com autenticacao.
+Comando:
+    -h  mostra o menu de ajuda do programa
+    -d  destinatario
+    -a  assunto
+    -e  corpo do e-mail em texto (Ex: enviaemail -e Corpo do e-mail)
+    -b  corpo do e-mail em arquivo TXT ou HTML (Ex: enviaemail -b /path/to/file.txt) 
+    -c  com copia - cc
+    -f  caminho do arquivo para anexo
+    -o  com copia oculta - bcc
+    -r  remetente 
+    obs.: Obrigatorio a utilizacao do -e ou -b para adicionar algum conteudo no corpo do e-mail. 
+"
+
+if [[ -z $1 ]]
+then
+  echo "$usage"
+  exit 1
+fi
+
+while getopts ':a:b:c:d:e:f:o:r:h' option; do
+  case "$option" in
+    h) echo "$usage";
+       exit;;
+    d) destinatario="-t ${OPTARG}";;
+    c) copia="-cc ${OPTARG}";;
+    a) assunto="-u ${OPTARG}";;
+    b) body="-o message-file=${OPTARG}";; 
+    e) body="-m ${OPTARG}";; 
+    f) anexo="-a "${OPTARG}"";;
+    o) copiaoculta="-bcc ${OPTARG}";;
+    r) REMETENTE="${OPTARG}";; 
+    :) printf "parametro incorreto: -%s\n" "${OPTARG}" >&2;
+       echo "$usage" >&2;
+       exit 1;;
+    ?) printf "opcao desconhecida: -%s\n" "${OPTARG}" >&2;
+       echo "$usage" >&2;
+       exit 1;;
+  esac
+done
+
+if [[ -z $destinatario ]]
+then
+  echo "destinatario vazio: -d"
+  echo "$usage"
+  exit 1
+fi
+
+if [[ -z $assunto ]]
+then
+  echo "assunto nao pode estar vazio: -a"
+  echo "$usage"
+  exit 1
+fi
+
+    
+/usr/sbin/sendEmail -q -f "$REMETENTE" $destinatario $assunto $copia $copiaoculta $anexo $body -o message-content-type=html -s $SMTP -xu $USUARIO -xp $SENHA > /dev/null
